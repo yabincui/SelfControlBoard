@@ -17,7 +17,7 @@ def main():
         run_cmd(['gcloud', 'app', 'deploy', 'app.yaml', '--project',
                  'selfcontrolboard'])
     elif args.server:
-        run_cmd(['dev_appserver.py', '--host', '0.0.0.0', 'app.yaml'])
+        run_cmd(['dev_appserver.py', '--clear_datastore=yes', '--host', '0.0.0.0', 'app.yaml'])
     else:
         parser.print_help()
 

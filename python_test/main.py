@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import json
+import random
 import unittest
 import urllib
 import urllib2
@@ -42,11 +44,34 @@ class TestTwoWeekGoal(TestBase):
                           {'tz_offset': '-7', 'to_tz_offset': '-8',
                            'datetime': '2018/7/2'}))
 
-    def test_two_week_goal(self):
-        self.assertEquals('ok', self.send_request('/add_two_week_goal',
-                          {'goal': 'help others', 'tz_offset': '-7',
-                           'start_date': '2018/6/7'}))
+    def test_json(self):
+        data = self.send_request('/test_json',
+                                 {'data': '{"hello": 3, "what": "you"}'})
+        data = json.loads(data)
+        self.assertEquals(len(data), 2)
+        self.assertEquals(3, data['hello'])
+        self.assertEquals('you', data['what'])
+        data = self.send_request('/test_json',
+                                 {'data': '["hello", 3]'})
+        data = json.loads(data)
+        self.assertEquals(len(data), 2)
+        self.assertEquals('hello', data[0])
+        self.assertEquals(3, data[1])
 
+    def test_two_week_goal(self):
+        self.assertEquals('ok', self.send_request('/clear_two_week_goals', {}))
+        value = random.randint(0, 1000000)
+        self.assertEquals('ok', self.send_request('/add_two_week_goal',
+                          {'goal': 'help %d people' % value,
+                           'tz_offset': '-7', 'start_date': '2018/6/7'}))
+        data = self.send_request('/get_two_week_goals',
+                                 {'tz_offset': '-7'})
+        data = json.loads(data)
+        self.assertEquals(len(data), 1)
+        data = data[0]
+        self.assertEquals('help %d people' % value, data['goal'])
+        self.assertEquals('2018/6/7/0/0/0', data['start_date'])
+        self.assertEquals(0, data['fulfill_status'])
 
 
 if __name__ == '__main__':

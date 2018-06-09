@@ -3,6 +3,7 @@ import webapp2
 
 from database import TwoWeekGoal
 from time_util import TimeUtil
+from json_util import JsonUtil
 
 def is_test_env():
     return not os.getenv('SERVER_SOFTWARE', '').startswith('Google App Engine/')
@@ -65,6 +66,11 @@ class MainPage(webapp2.RequestHandler):
         self.response.out.write(result)
         return True
 
+    def test_json(self):
+        data = JsonUtil.from_json(self.request.get('data'))
+        self.response.out.write(JsonUtil.to_json(data))
+        return True
+
     def handle_get_email(self):
         if self.email:
             self.response.out.write(self.email)
@@ -85,10 +91,27 @@ class MainPage(webapp2.RequestHandler):
         return True
 
     def handle_get_two_week_goals(self):
+        tz_offset = self.request.get('tz_offset')
+        if not tz_offset or not self.email:
+            return False
+        tz_offset = int(tz_offset)
         goals = TwoWeekGoal.query(self.email)
+        data = []
         for goal in goals:
-            pass
+            obj = {'goal': goal.goal,
+                   'start_date': TimeUtil.utc_datetime_to_str(tz_offset,
+                                                              goal.start_date),
+                   'fulfill_status': goal.fulfill_status}
+            data.append(obj)
+        self.response.out.write(JsonUtil.to_json(data))
+        return True
 
+    def handle_clear_two_week_goals(self):
+        if not self.email:
+            return False
+        TwoWeekGoal.clear(self.email)
+        self.response.out.write('ok')
+        return True
 
 
 app = webapp2.WSGIApplication([
