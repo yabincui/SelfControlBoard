@@ -59,19 +59,53 @@ class TestTwoWeekGoal(TestBase):
         self.assertEquals(3, data[1])
 
     def test_two_week_goal(self):
+        # Clear
         self.assertEquals('ok', self.send_request('/clear_two_week_goals', {}))
         value = random.randint(0, 1000000)
-        self.assertEquals('ok', self.send_request('/add_two_week_goal',
-                          {'goal': 'help %d people' % value,
-                           'tz_offset': '-7', 'start_date': '2018/6/7'}))
+        # Add
+        data = self.send_request('/add_two_week_goal',
+                                 {'goal': 'help %d people' % value,
+                                  'tz_offset': '-7', 'start_date': '2018/6/7'})
+        data = json.loads(data)
+        self.assertEquals(len(data), 1)
+        self.assertTrue(data['key'] is not None)
+        expected_key = data['key']
+        # Query
         data = self.send_request('/get_two_week_goals',
                                  {'tz_offset': '-7'})
         data = json.loads(data)
         self.assertEquals(len(data), 1)
         data = data[0]
+        self.assertEquals(expected_key, data['key'])
         self.assertEquals('help %d people' % value, data['goal'])
         self.assertEquals('2018/6/7/0/0/0', data['start_date'])
         self.assertEquals(0, data['fulfill_status'])
+        # Update
+        self.assertEquals('ok', self.send_request('/update_two_week_goal',
+                          {'key': expected_key,
+                           'goal': 'help more people',
+                           'start_date': '2018/6/8/0/0/0',
+                           'tz_offset': '-7',
+                           'fulfill_status': '1'}))
+        # Get
+        data = self.send_request('/get_two_week_goal',
+                                 {'key': expected_key, 'tz_offset': '-7'})
+        data = json.loads(data)
+        self.assertEquals(expected_key, data['key'])
+        self.assertEquals('help more people', data['goal'])
+        self.assertEquals('2018/6/8/0/0/0', data['start_date'])
+        self.assertEquals(1, data['fulfill_status'])
+        # Query again
+        data2 = self.send_request('/get_two_week_goals', {'tz_offset': '-7'})
+        data2 = json.loads(data2)
+        self.assertEquals(len(data2), 1)
+        self.assertEquals(data, data2[0])
+        # Clear
+        self.assertEquals('ok', self.send_request('/clear_two_week_goals', {}))
+        data2 = self.send_request('/get_two_week_goals', {'tz_offset': '-7'})
+        data2 = json.loads(data2)
+        self.assertEquals(len(data2), 0)
+
 
 
 if __name__ == '__main__':

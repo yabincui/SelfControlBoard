@@ -86,8 +86,21 @@ class MainPage(webapp2.RequestHandler):
             return False
         start_date = TimeUtil.str_to_utc_datetime(int(timezone_offset),
                                                   start_date)
-        TwoWeekGoal.create(self.email, goal, start_date)
-        self.response.out.write('ok')
+        goal = TwoWeekGoal.create(self.email, goal, start_date)
+        data = {'key': str(goal.key())}
+        self.response.out.write(JsonUtil.to_json(data))
+        return True
+
+    def handle_get_two_week_goal(self):
+        tz_offset = self.request.get('tz_offset')
+        key = self.request.get('key')
+        if not tz_offset or not key or not self.email:
+            return False
+        goal = TwoWeekGoal.get(key)
+        if not goal:
+            return False
+        data = goal.to_object(int(tz_offset))
+        self.response.out.write(JsonUtil.to_json(data))
         return True
 
     def handle_get_two_week_goals(self):
@@ -98,12 +111,29 @@ class MainPage(webapp2.RequestHandler):
         goals = TwoWeekGoal.query(self.email)
         data = []
         for goal in goals:
-            obj = {'goal': goal.goal,
-                   'start_date': TimeUtil.utc_datetime_to_str(tz_offset,
-                                                              goal.start_date),
-                   'fulfill_status': goal.fulfill_status}
-            data.append(obj)
+            data.append(goal.to_object(tz_offset))
         self.response.out.write(JsonUtil.to_json(data))
+        return True
+
+    def handle_update_two_week_goal(self):
+        key = self.request.get('key')
+        goal = self.request.get('goal')
+        timezone_offset = self.request.get('tz_offset')
+        start_date = self.request.get('start_date')
+        fulfill_status = self.request.get('fulfill_status')
+        if not key or not self.email:
+            return False
+        if start_date:
+            if not timezone_offset:
+                return False
+            start_date = TimeUtil.str_to_utc_datetime(int(timezone_offset),
+                                                      start_date)
+        if fulfill_status:
+            fulfill_status = int(fulfill_status)
+        if not TwoWeekGoal.update(self.email, key, goal, start_date,
+                                  fulfill_status):
+            return False
+        self.response.out.write('ok')
         return True
 
     def handle_clear_two_week_goals(self):
