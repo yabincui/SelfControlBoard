@@ -14,9 +14,10 @@ def main():
     args = parser.parse_args()
 
     if args.upload:
-        run_cmd(['gcloud', 'app', 'deploy', 'app.yaml', '--project',
+        run_cmd(['gcloud', 'app', 'deploy', 'app.yaml', 'index.yaml', '--project',
                  'selfcontrolboard'])
     elif args.server:
+        run_cmd(['rm', '-rf', 'index.yaml'])
         run_cmd(['dev_appserver.py', '--clear_datastore=yes', '--host', '0.0.0.0', 'app.yaml'])
     else:
         parser.print_help()

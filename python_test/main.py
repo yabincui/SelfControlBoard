@@ -17,19 +17,16 @@ def send_url_request(url, value_map):
 class TestBase(unittest.TestCase):
     def send_request(self, address, value_map):
         url = 'http://localhost:8080' + address
+        if 'email' not in value_map:
+            value_map['email'] = 'splintcoder@gmail.com'
         return send_url_request(url, value_map)
 
-    def setup(self):
-        self.assertEquals('ok', self.send_request('/test_set_email',
-                          {'email': 'splintcoder@gmail.com'}))
 
 class TestTwoWeekGoal(TestBase):
     def test_connection(self):
         self.assertEquals('hello, world1!', self.send_request('/', {}))
 
     def test_login(self):
-        self.assertEquals('ok', self.send_request('/test_set_email',
-                            {'email': 'splintcoder@gmail.com'}))
         self.assertEquals('splintcoder@gmail.com',
                           self.send_request('/get_email', {}))
 
@@ -105,7 +102,6 @@ class TestTwoWeekGoal(TestBase):
         data2 = self.send_request('/get_two_week_goals', {'tz_offset': '-7'})
         data2 = json.loads(data2)
         self.assertEquals(len(data2), 0)
-
 
 
 if __name__ == '__main__':

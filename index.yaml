@@ -11,12 +11,6 @@ indexes:
 # your application using appcfg.py.
 
 - kind: TwoWeekGoal
-  properties:
-  - name: email
-  - name: start_date
-    direction: desc
-
-- kind: TwoWeekGoal
   ancestor: yes
   properties:
   - name: start_date
