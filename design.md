@@ -15,3 +15,6 @@ frontend: (1) Show current goal as the subtitle.
               b. Add a new goal after two weeks. (Let the component button
                 becomes red.)
               c. View past goals.
+
+First need a register/login system.
+  Can login with google account, or use a custom register/login system.
