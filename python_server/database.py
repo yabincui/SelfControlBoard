@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from google.appengine.ext import db
+from google.appengine.datastore.datastore_query import Cursor
 
 from time_util import TimeUtil
 
@@ -81,5 +82,48 @@ class TwoWeekGoal(db.Model):
                 'fulfill_status': self.fulfill_status}
 
 
-class Database(object):
-    pass
+class Dairy(db.Model):
+    email = db.StringProperty(required=True)
+    date = db.DateTimeProperty(required=True)
+    dairy = db.TextProperty(required=True)
+
+    @classmethod
+    def create(cls, email, date, dairy):
+        email_key = Email.get_instance(email).key()
+        obj = Dairy(email_key, email=email, date=date, dairy=dairy)
+        obj.put()
+        return obj
+
+    @classmethod
+    def query(cls, email, count_limit, cursor=None):
+        if cursor:
+            cursor = Cursor(urlsafe=cursor)
+        q = db.Query(Dairy)
+        q.ancestor(Email.get_instance(email).key())
+        q.order('-date')
+        dairy, next_cursor, more = q.fetch_page(count_limit, cursor)
+        if more and next_cursor:
+            next_cursor = next_cursor.urlsafe()
+        return dairy, next_cursor, more
+
+    @classmethod
+    def update(cls, key, email, date, dairy):
+        obj = Dairy.get(key)
+        if not obj or email != obj.email:
+            return False
+        obj.date = date
+        obj.dairy = dairy
+        obj.put()
+        return True
+
+    @classmethod
+    def delete_instance(cls, key, email):
+        obj = Dairy.get(key)
+        if not obj or email != obj.email:
+            return False
+        obj.delete()
+        return True
+
+    def to_object(self, tz_offset):
+        return {'key': str(self.key()), 'date': TimeUtil.utc_datetime_to_str(tz_offset, self.date),
+                'dairy': self.dairy}

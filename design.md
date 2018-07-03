@@ -18,3 +18,15 @@ frontend: (1) Show current goal as the subtitle.
 
 First need a register/login system.
   Can login with google account, or use a custom register/login system.
+
+Two: Make a dairy system.
+background: add data table (email, date, dairy)
+frontend: (1) Add a page to show dairy history (in pages), add dairy, edit dairy.
+          (2) Add a button reminding to add dairy for today.
+
+Need a change remind logic. So changing in one computer can update content in another
+computer. Like check update when page is activated.
+
+
+Suggestions:
+1) User may happen to click the [delete] button in ListGoalHistory, add a confirm dailog. (done)
