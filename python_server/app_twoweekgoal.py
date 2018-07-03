@@ -13,14 +13,14 @@ class TwoWeekGoalApp(AppBase):
         start_date = TimeUtil.str_to_utc_datetime(int(timezone_offset),
                                                   start_date)
         goal = TwoWeekGoal.create(self.email, goal, start_date)
-        return True, {'key': str(goal.key())}
+        return True, {'key': goal.key.urlsafe()}
 
     def handle_get_goal(self):
         tz_offset = self.request.get('tz_offset')
         key = self.request.get('key')
         if not tz_offset or not key or not self.email:
             return False
-        goal = TwoWeekGoal.get(key)
+        goal = TwoWeekGoal.get_instance(key, self.email)
         if not goal:
             return False
         return True, goal.to_object(int(tz_offset))
@@ -32,7 +32,7 @@ class TwoWeekGoalApp(AppBase):
             return False
         tz_offset = int(tz_offset)
         count_limit = int(count_limit)
-        goals = TwoWeekGoal.query(self.email, count_limit)
+        goals = TwoWeekGoal.query_instances(self.email, count_limit)
         data = []
         for goal in goals:
             data.append(goal.to_object(tz_offset))

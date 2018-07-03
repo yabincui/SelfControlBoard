@@ -2,12 +2,14 @@ import webapp2
 
 from python_server.app_login import LoginApp
 from python_server.app_twoweekgoal import TwoWeekGoalApp
+from python_server.app_diary import DiaryApp
 
 class AppDistributor(webapp2.RequestHandler):
     def __init__(self, *args, **kwargs):
         super(AppDistributor, self).__init__(*args, **kwargs)
         self.dist_table = [
             ('/twoweekgoal', TwoWeekGoalApp()),
+            ('/diary', DiaryApp()),
             ('/', LoginApp()),
         ]
 

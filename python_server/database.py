@@ -1,18 +1,22 @@
 #!/usr/bin/python
 
-from google.appengine.ext import db
+from google.appengine.ext import ndb
 from google.appengine.datastore.datastore_query import Cursor
 
 from time_util import TimeUtil
 
-class Email(db.Model):
-    email = db.StringProperty(required=True)
-    passwd = db.StringProperty()
-    registered = db.IntegerProperty(default=0)
+class Email(ndb.Model):
+    email = ndb.StringProperty(required=True)
+    passwd = ndb.StringProperty()
+    registered = ndb.IntegerProperty(default=0)
 
     @classmethod
     def get_instance(cls, email):
         return Email.get_or_insert(email, email=email)
+
+    @classmethod
+    def get_by_key(cls, key):
+        return ndb.Key(urlsafe=key).get()
 
     @classmethod
     def create(cls, email, passwd):
@@ -25,37 +29,46 @@ class Email(db.Model):
         return obj
 
 
-class TwoWeekGoal(db.Model):
-    email = db.StringProperty(required=True)
-    goal = db.TextProperty(required=True)
-    start_date = db.DateTimeProperty(required=True)
-    fulfill_status = db.IntegerProperty(default=0)
+class TwoWeekGoal(ndb.Model):
+    email = ndb.StringProperty(required=True)
+    goal = ndb.TextProperty(required=True)
+    start_date = ndb.DateTimeProperty(required=True)
+    fulfill_status = ndb.IntegerProperty(default=0)
 
     @classmethod
     def create(cls, email, goal, start_date):
-        email_key = Email.get_instance(email).key()
-        obj = TwoWeekGoal(email_key, email=email, goal=goal,
+        email_key = Email.get_instance(email).key
+        obj = TwoWeekGoal(parent=email_key, email=email, goal=goal,
                           start_date=start_date)
         obj.put()
         return obj
 
     @classmethod
-    def query(cls, email, count_limit=-1):
-        q = db.Query(TwoWeekGoal)
-        q.ancestor(Email.get_instance(email).key())
-        q.order('-start_date')
+    def get_by_key(cls, key):
+        return ndb.Key(urlsafe=key).get()
+
+    @classmethod
+    def get_instance(cls, key, email):
+        obj = TwoWeekGoal.get_by_key(key)
+        if not obj or obj.email != email:
+            return None
+        return obj
+
+    @classmethod
+    def query_instances(cls, email, count_limit=-1):
+        q = TwoWeekGoal.query(ancestor=Email.get_instance(email).key).order(-TwoWeekGoal.start_date)
         if count_limit < 1:
             count_limit = None
         return q.fetch(count_limit)
 
     @classmethod
     def clear(cls, email):
-        for goal in cls.query(email):
-            goal.delete()
+        for goal in cls.query_instances(email):
+            goal.key.delete()
 
     @classmethod
     def update(cls, email, key, goal, start_date, fulfill_status):
-        obj = TwoWeekGoal.get(key)
+        obj = TwoWeekGoal.get_by_key(key)
         if not obj or email != obj.email:
             return False
         if goal:
@@ -69,50 +82,58 @@ class TwoWeekGoal(db.Model):
 
     @classmethod
     def delete_instance(cls, email, key):
-        obj = TwoWeekGoal.get(key)
+        obj = TwoWeekGoal.get_by_key(key)
         if not obj or email != obj.email:
             return False
-        obj.delete()
+        obj.key.delete()
         return True
 
     def to_object(self, tz_offset):
-        return {'key': str(self.key()), 'goal': self.goal,
+        return {'key': self.key.urlsafe(), 'goal': self.goal,
                 'start_date': TimeUtil.utc_datetime_to_str(tz_offset,
                                                            self.start_date),
                 'fulfill_status': self.fulfill_status}
 
 
-class Dairy(db.Model):
-    email = db.StringProperty(required=True)
-    date = db.DateTimeProperty(required=True)
-    dairy = db.TextProperty(required=True)
+class Diary(ndb.Model):
+    email = ndb.StringProperty(required=True)
+    date = ndb.DateTimeProperty(required=True)
+    diary = ndb.TextProperty(required=True)
 
     @classmethod
-    def create(cls, email, date, dairy):
-        email_key = Email.get_instance(email).key()
-        obj = Dairy(email_key, email=email, date=date, dairy=dairy)
+    def create(cls, email, date, diary):
+        email_key = Email.get_instance(email).key
+        obj = Diary(parent=email_key, email=email, date=date, diary=diary)
         obj.put()
         return obj
 
     @classmethod
-    def query(cls, email, count_limit, cursor=None):
-        if cursor:
-            cursor = Cursor(urlsafe=cursor)
-        q = db.Query(Dairy)
-        q.ancestor(Email.get_instance(email).key())
-        q.order('-date')
-        dairy, next_cursor, more = q.fetch_page(count_limit, cursor)
-        if more and next_cursor:
-            next_cursor = next_cursor.urlsafe()
-        return dairy, next_cursor, more
+    def get_instance(cls, key, email):
+        obj = Diary.get(key)
+        if not obj or obj.email != email:
+            return None
+        return obj
 
     @classmethod
-    def update(cls, key, email, date, dairy):
+    def query_instances(cls, email, count_limit, cursor):
+        if cursor:
+            cursor = Cursor(urlsafe=cursor)
+        else:
+            cursor = None
+        q = Diary.query(ancestor=Email.get_instance(email).key).order(-Diary.date)
+        diary, next_cursor, more = q.fetch_page(count_limit, start_cursor=cursor)
+        if more and next_cursor:
+            next_cursor = next_cursor.urlsafe()
+            return diary, next_cursor
+        return diary, None
+
+    @classmethod
+    def update(cls, key, email, date, diary):
         obj = Dairy.get(key)
         if not obj or email != obj.email:
             return False
         obj.date = date
-        obj.dairy = dairy
+        obj.diary = diary
         obj.put()
         return True
 
@@ -121,9 +142,16 @@ class Dairy(db.Model):
         obj = Dairy.get(key)
         if not obj or email != obj.email:
             return False
-        obj.delete()
+        obj.key.delete()
         return True
 
     def to_object(self, tz_offset):
-        return {'key': str(self.key()), 'date': TimeUtil.utc_datetime_to_str(tz_offset, self.date),
-                'dairy': self.dairy}
+        return {'key': self.key.urlsafe(), 'date': TimeUtil.utc_datetime_to_str(tz_offset, self.date),
+                'diary': self.diary}
+
+    @classmethod
+    def clear(cls, email):
+        q = Diary.query(ancestor=Email.get_instance(email).key)
+        diaries = q.fetch(None)
+        for diary in diaries:
+            diary.key.delete()

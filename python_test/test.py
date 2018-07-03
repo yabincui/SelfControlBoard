@@ -31,7 +31,7 @@ class TestBase(unittest.TestCase):
         return True
 
 
-class BasicTest(TestBase):
+class LoginTest(TestBase):
     def test_connection(self):
         self.assertEquals('hello, world1!', self.get('/test_connection', {}))
 
@@ -94,7 +94,7 @@ class TwoWeekGoalTest(TestBase):
                                  {'goal': 'help %d people' % value,
                                   'tz_offset': '-7', 'start_date': '2018/6/7'})
         self.assertEquals(len(data), 1)
-        self.assertIsNotNone(data['key'])
+        self.assertIn('key', data)
         expected_key = data['key']
         # Query
         data = self.get_json('/twoweekgoal/get_goals', {'tz_offset': '-7', 'count_limit': '-1'})
@@ -142,6 +142,50 @@ class TwoWeekGoalTest(TestBase):
         allData = self.get_json('/twoweekgoal/get_goals', {'tz_offset': '-7', 'count_limit': '-1'})
         self.assertEquals(len(allData), 1)
         self.assertEquals(allData[0]['key'], data2['key'])
+
+
+class DiaryTest(TestBase):
+    def get_diaries(self, count_limit_each_req):
+        diaries = []
+        cursor = None
+        while True:
+            req = {'tz_offset': '-7', 'count_limit': count_limit_each_req}
+            if cursor:
+                req['cursor'] = cursor
+            data = self.get_json('/diary/get_diaries', req)
+            self.assertTrue(len(data['data']) <= count_limit_each_req)
+            for diary in data['data']:
+                diaries.append(diary)
+            if 'next_cursor' in data:
+                cursor = data['next_cursor']
+            else:
+                break
+        return diaries
+
+    def test_smoke(self):
+        # Clear
+        self.assertTrue(self.get_json('/diary/clear_diaries', {}))
+        expected_keys = []
+        for i in range(20):
+            data = self.get_json('/diary/add_diary', {'tz_offset': '-7',
+                                                      'date': '2018/7/%d' % (i + 4),
+                                                      'diary': 'Go to mall %d today' % i})
+            self.assertEquals(len(data), 1)
+            self.assertIn('key', data)
+            expected_keys.append(data['key'])
+        # Query all
+        diaries = self.get_diaries(20)
+        self.assertEquals(len(diaries), 20)
+        for i in range(20):
+            ri = 19 - i
+            self.assertEquals(diaries[i]['key'], expected_keys[ri])
+            self.assertEquals(diaries[i]['diary'], 'Go to mall %d today' % ri)
+            self.assertEquals(diaries[i]['date'], '2018/7/%d/0/0/0' % (ri + 4))
+        # Query at different count_limit_each_req
+        for count_limit in range(1, 3, 24):
+            d = self.get_diaries(count_limit)
+            self.assertEquals(diaries, d)
+
 
 
 if __name__ == '__main__':

@@ -42,7 +42,8 @@ class LoginApp(AppBase):
         entity = Email.create(email, passwd)
         if not entity:
             return False, '%s has been registered' % email
-        url = UrlUtil.urlencode('/confirm_register', {'key': entity.key(), 'passwd': passwd})
+        url = UrlUtil.urlencode('/confirm_register',
+                {'key': entity.key.urlsafe(), 'passwd': passwd})
         self.send_email(email, 'Register confirm mail',
             """Please click below url to login:
                 %s
@@ -55,7 +56,7 @@ class LoginApp(AppBase):
     def handle_confirm_register(self):
         key = self.request.get('key')
         passwd = self.request.get('passwd')
-        entity = Email.get(key)
+        entity = Email.get_by_key(key)
         if not entity or entity.passwd != passwd:
             return False
         entity.registered = 1
