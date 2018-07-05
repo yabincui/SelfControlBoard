@@ -20,7 +20,7 @@ class DiaryApp(AppBase):
         key = self.request.get('key')
         if not self.email or not tz_offset or not key:
             return False
-        diary = Diary.get_instance(key, email)
+        diary = Diary.get_instance(key, self.email)
         if not diary:
             return False
         return True, diary.to_object(int(tz_offset))
@@ -29,11 +29,18 @@ class DiaryApp(AppBase):
         tz_offset = self.request.get('tz_offset')
         count_limit = self.request.get('count_limit')
         cursor = self.request.get('cursor')
+        min_date = self.request.get('min_date')
+        max_date = self.request.get('max_date')
         if not self.email or not tz_offset or not count_limit:
             return False
         count_limit = int(count_limit)
         tz_offset = int(tz_offset)
-        diaries, next_cursor = Diary.query_instances(self.email, count_limit, cursor)
+        if min_date:
+            min_date = TimeUtil.str_to_utc_datetime(tz_offset, min_date)
+        if max_date:
+            max_date = TimeUtil.str_to_utc_datetime(tz_offset, max_date)
+        diaries, next_cursor = Diary.query_instances(self.email, count_limit, cursor, min_date,
+            max_date)
         data = []
         for diary in diaries:
             data.append(diary.to_object(tz_offset))

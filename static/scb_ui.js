@@ -27,6 +27,9 @@ $(document).ready(function() {
     class Header {
 
         create(id, email) {
+            let url = $scb_util.urlControl.url;
+            let twoWeekGoalActive = (url == '/twoweekgoal' ? 'active' : '');
+            let diaryActive = (url == '/diary' ? 'active' : '');
             let add_new_goal_mark =
                 `<sup class="text-danger" id="${id}NewGoalMark"></sup>`;
             let str = `
@@ -39,9 +42,12 @@ $(document).ready(function() {
                     </button>
                     <div class="collapse navbar-collapse" id="${id}headerNavbar">
                         <ul class="navbar-nav mr-auto">
-                            <li class="nav-item active">
+                            <li class="nav-item ${twoWeekGoalActive}">
                                 <a class="nav-link" href="#" id="${id}TwoWeekGoal"
                                     >TwoWeekGoal${add_new_goal_mark}</a>
+                            </li>
+                            <li class="nav-item ${diaryActive}">
+                                <a class="nav-link" href="#" id="${id}Diary">Diary</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="#${id}Others">Others</a>
@@ -201,7 +207,8 @@ $(document).ready(function() {
                     <div class="form-group">
                         <label for="${id}Datepicker">Select Start date:</label>
                         <input id="${id}Datepicker" data-date-format="yyyy/mm/dd"
-                            data-date-start-date="0d" type="text"/>
+                            data-date-start-date="0d" data-date-autoclose="true"
+                            data-date-today-highlight="true" type="text"/>
                     </div>
                     <button type="submit" class="btn btn-primary" id="${id}Create">Create</button>
                 </form>
@@ -331,9 +338,211 @@ $(document).ready(function() {
         }
     }
 
+    class DiaryPage {
+        create(id) {
+            return `
+                <div id="${id}">
+                    ${this.createAddDiaryDiv(id + "Add")}
+                    ${this.createDiaryList(id + "List")}
+                </div>
+            `;
+        }
+
+        createAddDiaryDiv(id) {
+            let createAddDiaryForm = () => {
+                return `
+                    <form>
+                        <div class="form-group">
+                            <label for="${id}Datepicker">Select date:</label>
+                            <input id="${id}Datepicker" data-date-format="yyyy/mm/dd"
+                                data-date-autoclose="true" data-date-today-highlight="true"
+                                type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="${id}Content">Diary</label>
+                            <textarea class="form-control" id="${id}Content" rows="5"></textarea>
+                        </div>
+                    </form>
+                `;
+            };
+
+            return `
+                <div id="${id}">
+                    <p><button type="button" class="btn btn-primary" data-toggle="modal"
+                        data-target="#${id}Modal">Add New Diary</button></p>
+                    <div class="modal fade" id="${id}Modal" tabindex="-1" role="dialog"
+                        aria-labelledby=#${id}ModalTitle" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="${id}ModalTitle">New Diary</h5>
+                                    <button type="button" class="close" data-dismiss="modal"
+                                        aria-label="Close"><span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    ${createAddDiaryForm()}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-dismiss="modal">Close</button>
+                                    <button type="button" class="btn btn-primary"
+                                        id="${id}ModalAdd">Add</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        createDiaryList(id) {
+            let createFilterCard = () => {
+                return `
+                    <p>
+                        <button class="btn btn-primary" type="button" data-toggle="collapse"
+                            data-target="#${id}Filter" aria-expanded="false"
+                            aria-controls="${id}Filter">Diary Filter</button>
+                    </p>
+                    <div class="collapse" id="${id}Filter">
+                        <div class="card card-body">
+                            <form>
+                                <div class="form-group">
+                                    <label for="${id}StartDate">Start Date:</label>
+                                    <input id="${id}StartDate" data-date-format="yyyy/mm/dd"
+                                        data-date-autoclose="true" type="text"/>
+                                </div>
+                                <div class="form-group">
+                                    <label for="${id}EndDate">End Date:</label>
+                                    <input id="${id}EndDate" data-date-format="yyyy/mm/dd"
+                                        data-date-autoclose="true" type="text"/>
+                                </div>
+                                <div class="form-group">
+                                    <label for="${id}CountPerShow">Count per Show:</label>
+                                    <input id="${id}CountPerShow" type="text" value="10"/>
+                                </div>
+                                <button type="button" class="btn btn-primary"
+                                    id="${id}Show">Show Diaries</button>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                return `
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Diary Filter</h5>
+                        </div>
+                    </div>
+                `;
+            };
+            let createEditModal = () => {
+                let mId = id + "EditModal";
+                return `
+                    <div class="modal fade" id="${mId}" tabindex="-1" role="dialog"
+                        aria-labelledby="${mId}Label" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title"
+                                        id="${mId}Label">Edit diary</h5>
+                                    <button type="button" class="close" data-dismiss="modal"
+                                        aria-label="Close"><span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <p id="${mId}Date"></p>
+                                    <form>
+                                        <textarea class="form-control" id="${mId}Content"
+                                            rows="5"></textarea>
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-primary" id="${mId}Update"
+                                        >Update</button>
+                                    <button type="button" class="btn btn-primary"
+                                        data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            };
+            let createDeleteModal = () => {
+                let mId = id + "DeleteModal";
+                return `
+                    <div class="modal fade" id="${mId}" tabindex="-1" role="dialog"
+                        aria-labelledby="${mId}Label" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title"
+                                        id="${mId}Label">Are you sure to delete the diary?</h5>
+                                    <button type="button" class="close" data-dismiss="modal"
+                                        aria-label="Close"><span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <p id="${mId}Date"></p>
+                                    <p id="${mId}Content"></p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-warning" id="${mId}Delete"
+                                        >Delete</button>
+                                    <button type="button" class="btn btn-primary"
+                                        data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+            return `
+                <div id="${id}">
+                    ${createFilterCard()}
+                    ${createEditModal()}
+                    ${createDeleteModal()}
+                    <div id="${id}Body" class="list-group"></div>
+                    <div class="container">
+                        <div class="row justify-content-center">
+                            <button type="button" class="btn btn-primary"
+                                id="${id}More">More</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        createDiaryListItem(diary, diaryListId) {
+            let date = $scb_util.date.dateToStr($scb_util.date.strToDate(diary.date), false);
+            let id = $scb_util.createId();
+            return `
+                <div class="list-group-item flex-column align-items-start" id="${id}">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1" id="${id}Date">${date}</h5>
+                        <span>
+                            <button type="button" class="btn btn-outline-success btn-sm"
+                                data-toggle="modal" data-target="#${diaryListId}EditModal"
+                                id="${id}Edit" data-diary-key="${diary.key}">Edit</button>
+                            <button type="button" class="btn btn-outline-warning btn-sm"
+                                data-toggle="modal" data-target="#${diaryListId}DeleteModal"
+                                id="${id}Delete" data-diary-key="${diary.key}">Delete</button>
+                        </span>
+                    </div>
+                    <form>
+                        <textarea class="mb-2 form-control" id="${id}Diary" rows="5" disabled
+                            >${diary.diary}</textarea>
+                    </form>
+                </div>
+            `;
+        }
+    }
+
+
     $scb_ui.svgIcons = new SvgIcons();
     $scb_ui.header = new Header();
     $scb_ui.loginRegisterPage = new LoginRegisterPage();
     $scb_ui.mainPage = new MainPage();
     $scb_ui.twoWeekGoalPage = new TwoWeekGoalPage();
+    $scb_ui.diaryPage = new DiaryPage();
 });

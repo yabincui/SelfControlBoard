@@ -138,20 +138,24 @@ class TwoWeekGoalTest(TestBase):
         self.assertEquals(len(allData), 2)
         self.assertEquals(allData[0]['key'], data2['key'])
         self.assertEquals(allData[1]['key'], data1['key'])
-        self.assertTrue(self.get_json('/twoweekgoal/delete_goal', {'key': data1['key']}))
+        self.assertTrue(self.get_json('/twoweekgoal/delete_goal', {'key': data2['key']}))
         allData = self.get_json('/twoweekgoal/get_goals', {'tz_offset': '-7', 'count_limit': '-1'})
         self.assertEquals(len(allData), 1)
-        self.assertEquals(allData[0]['key'], data2['key'])
+        self.assertEquals(allData[0]['key'], data1['key'])
 
 
 class DiaryTest(TestBase):
-    def get_diaries(self, count_limit_each_req):
+    def get_diaries(self, count_limit_each_req, min_date=None, max_date=None):
         diaries = []
         cursor = None
         while True:
             req = {'tz_offset': '-7', 'count_limit': count_limit_each_req}
             if cursor:
                 req['cursor'] = cursor
+            if min_date:
+                req['min_date'] = min_date
+            if max_date:
+                req['max_date'] = max_date
             data = self.get_json('/diary/get_diaries', req)
             self.assertTrue(len(data['data']) <= count_limit_each_req)
             for diary in data['data']:
@@ -185,7 +189,28 @@ class DiaryTest(TestBase):
         for count_limit in range(1, 3, 24):
             d = self.get_diaries(count_limit)
             self.assertEquals(diaries, d)
-
+        # Query with date range
+        d = self.get_diaries(20, min_date='2018/7/10')
+        self.assertEquals(len(d), 14)
+        d = self.get_diaries(20, max_date='2018/7/10')
+        self.assertEquals(len(d), 7)
+        d = self.get_diaries(20, min_date='2018/7/11', max_date='2018/7/18')
+        self.assertEquals(len(d), 8)
+        # Delete 10
+        for i in range(0, len(expected_keys), 2):
+            self.assertTrue(self.get_json('/diary/delete_diary', {'key': expected_keys[i]}))
+        # Query again.
+        diaries = self.get_diaries(20)
+        self.assertEquals(len(diaries), 10)
+        for i in range(10):
+            ri = 19 - 2 * i
+            self.assertEquals(diaries[i]['key'], expected_keys[ri])
+        # Update diary 1.
+        self.assertTrue(self.get_json('/diary/update_diary', {'key': expected_keys[1],
+            'tz_offset': '-7', 'date': '2018/7/5', 'diary': 'Hello, world'}));
+        data = self.get_json('/diary/get_diary', {'key': expected_keys[1], 'tz_offset': '-7'});
+        self.assertEquals(data['key'], expected_keys[1])
+        self.assertEquals(data['diary'], 'Hello, world')
 
 
 if __name__ == '__main__':

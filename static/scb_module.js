@@ -73,6 +73,8 @@ $(document).ready(function() {
                         body.add(new MainModule());
                     } else if (url == '/twoweekgoal') {
                         body.add(new TwoWeekGoalModule());
+                    } else if (url == '/diary') {
+                        body.add(new DiaryModule());
                     }
                 }
             });
@@ -99,6 +101,11 @@ $(document).ready(function() {
             this.jobj.find(`#${this.id}TwoWeekGoal`).click((event) => {
                 event.preventDefault();
                 $scb_util.urlControl.push('/twoweekgoal');
+                $scb_module.body.reload();
+            });
+            this.jobj.find(`#${this.id}Diary`).click((event) => {
+                event.preventDefault();
+                $scb_util.urlControl.push('/diary');
                 $scb_module.body.reload();
             });
             if (this.email) {
@@ -392,31 +399,179 @@ $(document).ready(function() {
                         historyCard.find(`#${baseId}_${j}`).attr('fill', '#f00');
                     }
                 }
-                let deleteModal = historyCard.find(`#${historyCardId}ListDeleteModal`);
-                let deleteGoal = null;
-                deleteModal.on('show.bs.modal', (event) => {
-                    let goalId = $(event.relatedTarget).data('goalid');
-                    deleteModal.find(`#${historyCardId}ListDeleteModalGoal`)
-                        .text(goals[goalId].goal);
-                    deleteModal.find(`#${historyCardId}ListDeleteModalDelete`).click((event) => {
-                        deleteGoal = goals[goalId];
-                        deleteModal.modal('hide');
-                    });
-                });
-                deleteModal.on('hidden.bs.modal', (event) => {
-                    if (deleteGoal) {
-                        $scb_util.getJson('/twoweekgoal/delete_goal', {key: deleteGoal.key},
-                            (data) => {
-                                $scb_util.urlControl.set('/twoweekgoal', {show: 'ListGoalHistory'});
-                                $scb_module.body.reload();
-                            });
-                    }
-                });
             }
+            let deleteModal = historyCard.find(`#${historyCardId}ListDeleteModal`);
+            let deleteGoal = null;
+            deleteModal.on('show.bs.modal', (event) => {
+                let goalId = $(event.relatedTarget).data('goalid');
+                deleteModal.find(`#${historyCardId}ListDeleteModalGoal`)
+                    .text(goals[goalId].goal);
+                deleteModal.find(`#${historyCardId}ListDeleteModalDelete`).click((event) => {
+                    deleteGoal = goals[goalId];
+                    deleteModal.modal('hide');
+                });
+            });
+            deleteModal.on('hidden.bs.modal', (event) => {
+                if (deleteGoal) {
+                    $scb_util.getJson('/twoweekgoal/delete_goal', {key: deleteGoal.key},
+                        (data) => {
+                            $scb_util.urlControl.set('/twoweekgoal', {show: 'ListGoalHistory'});
+                            $scb_module.body.reload();
+                        });
+                }
+            });
         }
     }
 
-    // TwoWeekGoalModule, contains two week goals.
+    class DiaryModule extends Module {
+        constructor() {
+            super($scb_util.createId(), 'DiaryModule');
+            this.text = $scb_ui.diaryPage.create(this.id);
+        }
+
+        onAdded() {
+            this.onShowAddDiary();
+            this.onShowDiaryList();
+        }
+
+        onShowAddDiary() {
+            this.jobj.find(`#${this.id}AddDatepicker`).datepicker({});
+            let diaryAdded = false;
+            this.jobj.find(`#${this.id}AddModalAdd`).click((event) => {
+                diaryAdded = this.addDiaryCallback();
+            });
+            this.jobj.find(`#${this.id}AddModal`).on('hidden.bs.modal', (event) => {
+                if (diaryAdded) {
+                    $scb_util.urlControl.set('/diary');
+                    $scb_module.body.reload();
+                }
+            });
+        }
+
+        onShowDiaryList() {
+            this.jobj.find(`#${this.id}ListStartDate`).datepicker({});
+            this.jobj.find(`#${this.id}ListEndDate`).datepicker({});
+            this.jobj.find(`#${this.id}ListMore`).hide();
+            this.jobj.find(`#${this.id}ListShow`).click((event) => {
+                this.showDiaryCallback();
+            });
+            let editModalId = this.id + 'ListEditModal';
+            let editModal = this.jobj.find(`#${editModalId}`);
+            let editButton = editModal.find(`#${editModalId}Update`);
+            editModal.on('show.bs.modal', (event) => {
+                let raiseButton = $(event.relatedTarget);
+                let raiseId = raiseButton.attr('id');
+                raiseId = raiseId.substr(0, raiseId.length - 4);
+                let date = this.jobj.find(`#${raiseId}Date`).text();
+                let diary = this.jobj.find(`#${raiseId}Diary`).val();
+                let key = raiseButton.data('diary-key');
+                editModal.find(`#${editModalId}Date`).empty().append(date);
+                editModal.find(`#${editModalId}Content`).val(diary);
+                editButton.data('diary-key', key);
+                editButton.data('diary-div', raiseId);
+            });
+            editButton.click((event) => {
+                let date = editModal.find(`#${editModalId}Date`).text();
+                let diary = editModal.find(`#${editModalId}Content`).val();
+                $scb_util.getJson('/diary/update_diary',
+                    {tz_offset: $scb_util.date.getTimeZone(), 'key': editButton.data('diary-key'),
+                     date: date, diary: diary}, (data) => {
+                         this.jobj.find(`#${editButton.data('diary-div')}Diary`).empty()
+                            .append(diary);
+                         editModal.modal('hide');
+                     });
+            });
+
+            let deleteModalId = this.id + 'ListDeleteModal';
+            let deleteModal = this.jobj.find(`#${deleteModalId}`);
+            let deleteButton = deleteModal.find(`#${deleteModalId}Delete`);
+            deleteModal.on('show.bs.modal', (event) => {
+                let raiseButton = $(event.relatedTarget);
+                let raiseId = raiseButton.attr('id');
+                raiseId = raiseId.substr(0, raiseId.length - 6);
+                let date = this.jobj.find(`#${raiseId}Date`).text();
+                let diary = this.jobj.find(`#${raiseId}Diary`).val();
+                let key = raiseButton.data('diary-key');
+                deleteModal.find(`#${deleteModalId}Date`).empty().append(date);
+                deleteModal.find(`#${deleteModalId}Content`).empty().append(diary);
+                deleteButton.data('diary-key', key);
+                deleteButton.data('diary-div', raiseId);
+            });
+            deleteButton.click((event) => {
+                $scb_util.getJson('/diary/delete_diary', {key: deleteButton.data('diary-key')},
+                    (data) => {
+                        this.jobj.find(`#${deleteButton.data('diary-div')}`).remove();
+                        deleteModal.modal('hide');
+                    });
+            });
+            this.showDiaryCallback();
+        }
+
+        addDiaryCallback() {
+            let diary = this.jobj.find(`#${this.id}AddContent`).val();
+            let dateStr = this.jobj.find(`#${this.id}AddDatepicker`).val();
+            if (!diary) {
+                alert('Diary is empty.');
+                return false;
+            }
+            if (!dateStr) {
+                alert('Please select date.');
+                return false;
+            }
+            $scb_util.getJson('/diary/add_diary',
+                {diary: diary, date: dateStr, tz_offset: $scb_util.date.getTimeZone()},
+                (data) => {
+                    this.jobj.find(`#${this.id}AddModal`).modal('hide');
+                });
+            return true;
+        }
+
+        showDiaryCallback() {
+            let listId = this.id + 'List';
+            let listDiv = this.jobj.find(`#${listId}`);
+            listDiv.find(`#${listId}Body`).empty();
+            let startDate = listDiv.find(`#${listId}StartDate`).val();
+            let endDate = listDiv.find(`#${listId}EndDate`).val();
+            let countPerShow = listDiv.find(`#${listId}CountPerShow`).val();
+            this.getDiaries(startDate, endDate, countPerShow, null);
+            let moreButton = listDiv.find(`#${listId}More`);
+            moreButton.off('click');
+            moreButton.click((event) => {
+                this.getDiaries(startDate, endDate, countPerShow, moreButton.data('cursor'));
+            });
+        }
+
+        getDiaries(startDate, endDate, countPerShow, cursor) {
+            let req = {tz_offset: $scb_util.date.getTimeZone(), count_limit: countPerShow}
+            if (startDate) {
+                req.min_date = startDate;
+            }
+            if (endDate) {
+                req.max_date = endDate;
+            }
+            if (cursor) {
+                req.cursor = cursor;
+            }
+            $scb_util.getJson('/diary/get_diaries', req, (data) => {
+                let diaries = data.data;
+                let nextCursor = data.next_cursor;
+                let listId = this.id + 'List';
+                let listBody = this.jobj.find(`#${listId}Body`);
+                for (let diary of diaries) {
+                    listBody.append($scb_ui.diaryPage.createDiaryListItem(diary, listId));
+                }
+                let moreButton = this.jobj.find(`#${listId}More`);
+                if (nextCursor) {
+                    moreButton.data('cursor', nextCursor);
+                    moreButton.show();
+                } else {
+                    moreButton.hide();
+                }
+            });
+        }
+
+    }
+
 
     $scb_module.body = new BodyModule();
 });

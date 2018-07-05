@@ -26,9 +26,6 @@ class AppBase(object):
             handle_name = self._get_handle_name(name)
             if handle_name:
                 table[handle_name] = method
-        print('build table')
-        for key in table:
-            print('\t%s' % key)
         return table
 
     def process_request(self, request_path, request, response):
@@ -41,14 +38,13 @@ class AppBase(object):
             if ret is None:
                 return True
             msg = None
-            print('ret = %s' % str(ret))
             if isinstance(ret, tuple):
                 ret, msg = ret
             data = {}
             data['status'] = 'ok' if ret else 'error'
             if msg is not None:
                 data['msg'] = msg
-            print('data = %s' % data)
+            print('ret = %s, data = %s' % (ret, data))
             self.response.out.write(JsonUtil.encode(data))
             return True
         print("can't find handle for %s" % request_path)

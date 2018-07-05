@@ -84,6 +84,7 @@ class TwoWeekGoal(ndb.Model):
     def delete_instance(cls, email, key):
         obj = TwoWeekGoal.get_by_key(key)
         if not obj or email != obj.email:
+            print('delete_instance obj = %s, key = %s' % (obj, key))
             return False
         obj.key.delete()
         return True
@@ -108,19 +109,28 @@ class Diary(ndb.Model):
         return obj
 
     @classmethod
+    def get_by_key(cls, key):
+        return ndb.Key(urlsafe=key).get()
+
+    @classmethod
     def get_instance(cls, key, email):
-        obj = Diary.get(key)
+        obj = Diary.get_by_key(key)
         if not obj or obj.email != email:
             return None
         return obj
 
     @classmethod
-    def query_instances(cls, email, count_limit, cursor):
+    def query_instances(cls, email, count_limit, cursor, min_date=None, max_date=None):
         if cursor:
             cursor = Cursor(urlsafe=cursor)
         else:
             cursor = None
-        q = Diary.query(ancestor=Email.get_instance(email).key).order(-Diary.date)
+        q = Diary.query(ancestor=Email.get_instance(email).key)
+        if min_date:
+            q = q.filter(Diary.date >= min_date)
+        if max_date:
+            q = q.filter(Diary.date <= max_date)
+        q = q.order(-Diary.date)
         diary, next_cursor, more = q.fetch_page(count_limit, start_cursor=cursor)
         if more and next_cursor:
             next_cursor = next_cursor.urlsafe()
@@ -129,8 +139,8 @@ class Diary(ndb.Model):
 
     @classmethod
     def update(cls, key, email, date, diary):
-        obj = Dairy.get(key)
-        if not obj or email != obj.email:
+        obj = Diary.get_instance(key, email)
+        if not obj:
             return False
         obj.date = date
         obj.diary = diary
@@ -139,8 +149,8 @@ class Diary(ndb.Model):
 
     @classmethod
     def delete_instance(cls, key, email):
-        obj = Dairy.get(key)
-        if not obj or email != obj.email:
+        obj = Diary.get_instance(key, email)
+        if not obj:
             return False
         obj.key.delete()
         return True
