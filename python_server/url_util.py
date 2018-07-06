@@ -27,7 +27,10 @@ class UrlUtil(object):
     @classmethod
     def get(cls, url, value_map):
         """ Send value_map to the url, and receive reply. """
-        data = urllib.urlencode(value_map)
+        values = {}
+        for key in value_map:
+            values[key] = value_map[key].encode('utf-8')
+        data = urllib.urlencode(values)
         req = urllib2.Request(url, data)
         response = urllib2.urlopen(req)
         return response.read()

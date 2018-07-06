@@ -10,8 +10,10 @@ from time_util import TimeUtil
 from json_util import JsonUtil
 from url_util import UrlUtil
 
-
-
+class Passcode(object):
+    def __init__(self):
+        with open(os.path.join('migration', 'passcode')) as f:
+            self.code = f.read().strip()
 
 class AppBase(object):
     def __init__(self):
@@ -19,6 +21,7 @@ class AppBase(object):
         self.request = None
         self.response = None
         self.email = None
+        self.passcode = Passcode()
 
     def build_handle_table(self):
         table = {}
@@ -34,7 +37,7 @@ class AppBase(object):
             self.request = request
             self.response = response
             self.email = self.parse_email()
-            ret = handle()
+            ret = self.execute_handle(request_path, handle)
             if ret is None:
                 return True
             msg = None
@@ -49,6 +52,12 @@ class AppBase(object):
             return True
         print("can't find handle for %s" % request_path)
         return False
+
+    def execute_handle(self, request_path, handle):
+        if request_path.startswith('/passcode_'):
+            if self.passcode.code != self.request.get('passcode'):
+                return False
+        return handle()
 
     def parse_email(self):
         email = self.request.get('email')

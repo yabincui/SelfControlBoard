@@ -24,9 +24,12 @@ background: add data table (email, date, dairy)
 frontend: (1) Add a page to show dairy history (in pages), add dairy, edit dairy.
           (2) Add a button reminding to add dairy for today.
 
-Need a change remind logic. So changing in one computer can update content in another
-computer. Like check update when page is activated.
 
+Migrate from DailyNote2 DailyNote to SelfControlBoard Diary.
 
 Suggestions:
 1) User may happen to click the [delete] button in ListGoalHistory, add a confirm dailog. (done)
+
+
+Third: Need a change remind logic. So changing in one computer can update content in another
+computer. Like check update when page is activated.

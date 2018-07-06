@@ -70,3 +70,20 @@ class DiaryApp(AppBase):
             return False
         Diary.clear(self.email)
         return True
+
+    def handle_passcode_add_diary(self):
+        """ Used to migrate from DailyNote2. """
+        diary = self.request.get('diary')
+        tz_offset = self.request.get('tz_offset')
+        date = self.request.get('date')
+        email = self.request.get('email')
+        if not email or diary is None or not tz_offset or not date:
+            return False
+        date = TimeUtil.str_to_utc_datetime(int(tz_offset), date)
+        diary = Diary.create(email, date, diary)
+        return True, {'key': diary.key.urlsafe()}
+
+    def handle_passcode_clear_diaries(self):
+        email = self.request.get('email')
+        Diary.clear(email)
+        return True

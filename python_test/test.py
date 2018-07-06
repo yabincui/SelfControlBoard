@@ -7,8 +7,8 @@ import sys
 import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from json_util import JsonUtil
-from url_util import UrlUtil
+from python_server.json_util import JsonUtil
+from python_server.url_util import UrlUtil
 
 class TestBase(unittest.TestCase):
 
@@ -149,7 +149,7 @@ class DiaryTest(TestBase):
         diaries = []
         cursor = None
         while True:
-            req = {'tz_offset': '-7', 'count_limit': count_limit_each_req}
+            req = {'tz_offset': '-7', 'count_limit': str(count_limit_each_req)}
             if cursor:
                 req['cursor'] = cursor
             if min_date:

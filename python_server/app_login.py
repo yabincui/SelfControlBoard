@@ -33,8 +33,6 @@ class LoginApp(AppBase):
         return True, 'None'
 
     def handle_register(self):
-        if self.email:
-            return False, '%s has been registered' % self.email
         email = self.request.get('email')
         passwd = self.request.get('passwd')
         if not email or not passwd:
